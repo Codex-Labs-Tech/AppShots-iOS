@@ -34,6 +34,17 @@ final class AppShotsTests: XCTestCase {
         XCTAssertEqual(contents.fixtureSet, "demo")
     }
 
+    func testKnowsWhenAppShotsSetTheClock() {
+        AppShots.start(environment: ["APPSHOTS_CAPTURE": "1"], handshakeFolder: folder())
+        XCTAssertFalse(AppShots.isClockSet)
+        AppShots.start(environment: ["APPSHOTS_CAPTURE": "1", "APPSHOTS_CLOCK_START": "1800000000"], handshakeFolder: folder())
+        XCTAssertTrue(AppShots.isClockSet)
+        // The clock variable alone, without an AppShots launch, means nothing.
+        AppShots.state = AppShots.State()
+        AppShots.start(environment: ["APPSHOTS_CLOCK_START": "1800000000"], handshakeFolder: folder())
+        XCTAssertFalse(AppShots.isClockSet)
+    }
+
     func testLaunchedButNotCapturingStillReportsThePackage() {
         let handshake = folder()
         AppShots.start(environment: ["APPSHOTS_CAPTURE": "1"], handshakeFolder: handshake)

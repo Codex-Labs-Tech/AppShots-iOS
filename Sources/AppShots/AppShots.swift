@@ -21,6 +21,11 @@ public enum AppShots {
     /// The fixture set AppShots asked for, if any: load that demo data instead of the usual source.
     public static var fixtureSet: String? { state.fixtureSet }
 
+    /// True when AppShots has set this app's clock to a fixed time of day (its `appClock` setting), so dates read the
+    /// same every run. If your app ends sessions when the clock moves (a guard against people changing the time),
+    /// skip that guard while this is true: AppShots moved it on purpose. See the README.
+    public static var isClockSet: Bool { state.isClockSet }
+
     /// Reads AppShots' launch settings and tells AppShots the package is here. Call it once, early, in debug builds.
     public static func start() {
         start(environment: ProcessInfo.processInfo.environment)
@@ -38,6 +43,7 @@ public enum AppShots {
         var launchedByAppShots = false
         var isCapturing = false
         var fixtureSet: String?
+        var isClockSet = false
     }
 
     #if DEBUG
@@ -52,6 +58,8 @@ public enum AppShots {
         static let launched = "APPSHOTS_CAPTURE"
         static let captureMode = "APPSHOTS_CAPTURE_MODE"
         static let fixtures = "APPSHOTS_FIXTURES"
+        /// Set by AppShots when it loads its clock library into the app.
+        static let clockStart = "APPSHOTS_CLOCK_START"
     }
 
     static func start(environment: [String: String], handshakeFolder: URL? = nil) {
@@ -59,7 +67,8 @@ public enum AppShots {
         guard environment[Key.launched] == "1" else { return }
         state = State(launchedByAppShots: true,
                       isCapturing: environment[Key.captureMode] == "1",
-                      fixtureSet: environment[Key.fixtures].flatMap { $0.isEmpty ? nil : $0 })
+                      fixtureSet: environment[Key.fixtures].flatMap { $0.isEmpty ? nil : $0 },
+                      isClockSet: environment[Key.clockStart] != nil)
         Handshake.write(state, to: handshakeFolder ?? Handshake.defaultFolder)
         #endif
     }
@@ -80,12 +89,14 @@ enum Handshake {
         var features: [String]
         var captureMode: Bool
         var fixtureSet: String?
+        var clockSet: Bool
         var startedAt: Date
     }
 
     static func write(_ state: AppShots.State, to folder: URL, now: Date = Date()) {
-        let contents = Contents(version: AppShots.version, features: ["captureMode", "fixtures"],
-                                captureMode: state.isCapturing, fixtureSet: state.fixtureSet, startedAt: now)
+        let contents = Contents(version: AppShots.version, features: ["captureMode", "fixtures", "clock"],
+                                captureMode: state.isCapturing, fixtureSet: state.fixtureSet, clockSet: state.isClockSet,
+                                startedAt: now)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
