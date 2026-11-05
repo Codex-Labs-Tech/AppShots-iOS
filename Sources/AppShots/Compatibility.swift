@@ -1,3 +1,3 @@
 // Both spellings use the same implementation and capture state.
-@_exported import Trueframe
-public typealias AppShots = Trueframe
+@_exported import TrueFrame
+public typealias AppShots = TrueFrame

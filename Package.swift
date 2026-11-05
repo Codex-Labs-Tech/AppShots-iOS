@@ -2,16 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "Trueframe",
+    name: "TrueFrame",
     platforms: [.iOS(.v15)],
     products: [
-        .library(name: "Trueframe", targets: ["Trueframe"]),
+        .library(name: "TrueFrame", targets: ["TrueFrame"]),
         // Existing integrations keep their product/import/API until they choose to migrate.
         .library(name: "AppShots", targets: ["AppShots"]),
     ],
     targets: [
-        .target(name: "Trueframe"),
-        .target(name: "AppShots", dependencies: ["Trueframe"]),
-        .testTarget(name: "TrueframeTests", dependencies: ["Trueframe", "AppShots"]),
+        .target(name: "TrueFrame"),
+        .target(name: "AppShots", dependencies: ["TrueFrame"]),
+        .testTarget(name: "TrueFrameTests", dependencies: ["TrueFrame", "AppShots"]),
     ]
 )
