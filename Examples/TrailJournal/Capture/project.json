@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "app": { "bundleId": "dev.trueframe.examples.TrailJournal", "build": "Builds/TrailJournal.app" },
+  "devices": { "phone": { "simulator": "iPhone 17 Pro Max", "runtime": "iOS 27.0", "expectedSize": [1320, 2868] } },
+  "profiles": {
+    "clean": {
+      "statusBar": { "time": "9:41", "dataNetwork": "wifi", "wifiMode": "active", "wifiBars": 3,
+                     "cellularMode": "active", "cellularBars": 4, "operatorName": "",
+                     "batteryState": "charged", "batteryLevel": 100 },
+      "contentSize": "large"
+    }
+  },
+  "links": { "launchArgument": "-trueframe-link" },
+  "flows": {
+    "journal": [
+      { "launch": { "arguments": ["-trueframe-link", "trailjournal://journal"] } },
+      { "waitFor": { "identifier": "journal.trail.cedar-loop" } }
+    ],
+    "cedar-loop": [
+      { "launch": { "arguments": ["-trueframe-link", "trailjournal://trail/cedar-loop"] } },
+      { "waitFor": { "identifier": "trail.note.cedar-loop" } }
+    ]
+  },
+  "sets": {
+    "app-store": {
+      "profile": "clean",
+      "package": { "captureMode": true, "fixtures": "weekend-hikes" },
+      "locales": ["en-US"], "devices": ["phone"], "appearances": ["light"],
+      "frames": [ { "name": "journal", "flow": "journal" }, { "name": "cedar-loop", "flow": "cedar-loop" } ]
+    }
+  },
+  "output": "captures"
+}

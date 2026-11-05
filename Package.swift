@@ -13,5 +13,11 @@ let package = Package(
         .target(name: "TrueFrame"),
         .target(name: "AppShots", dependencies: ["TrueFrame"]),
         .testTarget(name: "TrueFrameTests", dependencies: ["TrueFrame", "AppShots"]),
+        // Host-side checks reuse the example's actual model/adapter without launching a simulator.
+        .testTarget(
+            name: "JournalExampleTests", dependencies: ["TrueFrame"], path: "Examples/TrailJournal",
+            exclude: ["TrailJournal.xcodeproj", "README.md", "Capture", "App/ContentView.swift", "App/TrailJournalApp.swift"],
+            sources: ["App/Journal.swift", "App/CaptureSetup.swift", "Tests/JournalTests.swift"]
+        ),
     ]
 )
