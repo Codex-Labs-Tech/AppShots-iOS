@@ -2,8 +2,9 @@
 
 Checked 6 November 2026 on an Apple silicon Mac with Xcode 27.2 (27B52), Apple Swift 6.4.2,
 and the iOS Simulator 27.2 SDK. Repository baseline: `5977f5f`.
-All build outputs/logs are in ignored `.build/` under this checkout. No simulator was booted, installed or launched.
-No Xcode test job or UI automation was run. No tags or package release were created.
+The initial compiler/host checks below kept their outputs/logs in ignored `.build/` under that checkout. Those checks
+did not boot, install or launch a simulator, or run Xcode UI tests. A subsequent runtime capture rehearsal is recorded
+separately below. Neither phase created tags or a package release.
 
 ## Host checks
 
@@ -81,10 +82,38 @@ exact link validation, literal content identifiers, local-only fixture sources, 
 and unchanged public APIs, compatibility product, environment keys, version and detection format/location.
 SDK implementation changes are documentation comments only.
 
-## Unproved runtime limits
+## Runtime capture and controlled second build
 
-No claim is made that these screens rendered correctly, identifiers appeared in an accessibility tree, initial
-navigation reached the detail, or the Mac capture/export flow completed. Those require a separate interactive run.
-The included simulator slot may need adapting to an installed device/runtime. The example is English only and has
-no persistent database, networking, authentication, Keychain or server state. It cannot prove integration with those
-systems, asynchronous fixture loading, clock injection, snapshot portability, or production authorization boundaries.
+A subsequent **6 November 2026** local rehearsal used SDK/example source
+`261db07d8e44f0d6d7793087da9028dc47e40616`, macOS 27.0.1, Xcode 27.2 and an iPhone 17 Pro simulator on iOS 27.0.
+The supplied capture project was copied and adapted to the actual device, 1206 × 2622 size and an isolated app bundle ID.
+Both Debug simulator builds had signing disabled. No SDK implementation/API/protocol change was needed.
+
+Observed through the app UI, actual screenshots, saved accessibility trees and capture manifests:
+
+- A normal launch showed the empty journal and local tip. It did not load demo data.
+- TrueFrame requested capture mode and `weekend-hikes`; both journal and initial detail-link flows captured successfully.
+  The three synthetic trails and Cedar Loop note rendered. Their waits found `journal.trail.cedar-loop` and
+  `trail.note.cedar-loop` in real accessibility trees. Neither captured tree contained `journal.tip` or `journal.empty`.
+  Both records reported SDK 0.1.0, capture mode true and the requested fixture.
+- Both plain PNGs exported successfully from the Mac viewer in fastlane layout, with size/alpha/preflight checks passing.
+- A controlled build 2 changed the detail note and its identifier to `trail.notes.cedar-loop`. Reopening the same capture
+  project marked both old captures Out of Date, naming builds 1 and 2. Run Out of Date refreshed the journal and failed
+  the detail's old identifier wait. The inspector showed the closest new identifier and the stopped screen.
+- Editing the flow and running Test recaptured only the failed detail. The journal's capture record/time was unchanged
+  by that repair. The existing exported PNGs and marker stayed byte-identical through installation, failure and repair.
+- Final export contained both RGB PNGs, 1206 × 2622 with no alpha. Journal was byte-identical to its baseline; only the
+  intentionally changed detail differed.
+
+This closes the earlier gap for the example's Debug fixture/link/identifier capture path. It is a controlled,
+same-session internal rehearsal, not a customer's later release, a time-savings benchmark or general-app validation.
+Runtime evidence/builds were retained locally; no screenshots or app binaries were added to this repository,
+and no package release tags were created.
+
+## Remaining limits
+
+The supplied simulator slot still needs adapting to the installed device/runtime. This example is English only and has
+no persistent database, networking, authentication, Keychain or server state. The rehearsal does not prove integration
+with those systems, asynchronous fixture loading, clock injection, snapshot portability, minimum-OS behavior or production
+authorization boundaries. Release inactivity remains covered by the compiler/host checks above; Release was not launched
+in this runtime rehearsal. Capture/preflight success does not replace human visual review or certify arbitrary app data.

@@ -116,6 +116,9 @@ The SDK itself makes no network requests.
 [Trail Journal](Examples/TrailJournal/README.md) includes a normal Xcode project, local package dependency,
 named synthetic fixtures, validated debug launch links and content accessibility identifiers. No service or account is needed.
 
+The example's Debug fixture/link/identifier capture path and a controlled second-build repair have also been exercised
+in a simulator; see the [runtime results and remaining limits](docs/validation.md#runtime-capture-and-controlled-second-build).
+
 From this repository root, with Xcode's command-line tools selected:
 
 ```sh
