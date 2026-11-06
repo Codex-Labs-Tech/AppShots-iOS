@@ -1,84 +1,131 @@
 # TrueFrame for iOS
 
-Formerly AppShots. The repository URL stays `https://github.com/Codex-Labs-Tech/AppShots-iOS`.
-New integrations use the **TrueFrame** product, `import TrueFrame` and `TrueFrame.start()`.
-Existing **AppShots** product/import and `AppShots.start()` remain supported aliases of the same implementation;
-capture/fixture/clock environment keys and the `Library/Application Support/AppShots/package.json` handshake stay unchanged
-so existing Mac builds and app integrations continue to cooperate. No project data or app authentication is migrated.
-The new product is available from this source revision after merge/release; the existing `0.1.0` tag is not rewritten.
+The optional in-app companion to TrueFrame's Mac screenshot tool. Basic capture works **without this package**.
+Add it when your app should deliberately load named local data or suppress optional UI during a capture.
+It does not generate data, sign in, stub networking, set the clock, or navigate your app.
 
-The in-app half of [TrueFrame](https://github.com/Codex-Labs-Tech), the Mac tool that captures App Store screenshots from the iOS Simulator. Optional: TrueFrame works without it. Add it to get cleaner, steadier captures:
+Formerly AppShots. The repository URL remains `https://github.com/Codex-Labs-Tech/AppShots-iOS`.
+Use the **TrueFrame** product, `import TrueFrame`, and `TrueFrame.start()` for new integrations.
+The **AppShots** product/import and `AppShots.start()` remain supported aliases sharing the same state.
+`APPSHOTS_*` environment keys and the `Library/Application Support/AppShots/package.json` handshake are unchanged.
+The TrueFrame product is available from this source revision; the existing `0.1.0` tag is not rewritten and
+contains the older AppShots product. Package-reported version remains `0.1.0`.
 
-- **Capture mode.** `TrueFrame.isCapturing` tells your app a screenshot is being taken, so it can skip what gets in the way: permission and biometric prompts, onboarding, review requests, tips, debug banners.
-- **Fixtures.** TrueFrame can ask your app to load a named set of demo data instead of the usual source.
-- **Clock awareness.** `TrueFrame.isClockSet` tells your app that TrueFrame fixed its clock, so a guard against clock changes can stand down.
+## Start without the SDK
 
-It does nothing unless TrueFrame launches your app, and then only what your TrueFrame project turns on. In release builds it compiles to empty stubs, so it can't activate in anything you ship.
+Use an app already installed on an iOS Simulator, or build a **simulator `.app`** in Xcode and give it to TrueFrame.
+An App Store download, `.ipa`, or iPhone/device `.app` cannot run in the Simulator, even on an Apple silicon Mac.
+Prepare a synthetic local/demo state manually, then use existing deep links or recorded taps to reach one screen.
+Start with one device, one locale, one appearance; inspect the capture before expanding the matrix.
+See [capture recipes](docs/capture-recipes.md) for the current Mac config and CLI handoff.
 
-## Install
+## Install and start early
 
-1. In Xcode: **File › Add Package Dependencies…**, paste `https://github.com/Codex-Labs-Tech/AppShots-iOS`, and add the **TrueFrame** library to your app target.
-2. Start it early, in debug builds only. In a SwiftUI app:
+1. In Xcode, choose **File › Add Package Dependencies…** and enter
+   `https://github.com/Codex-Labs-Tech/AppShots-iOS`. Choose **Branch: main** (or pin a commit containing the
+   TrueFrame product), then add **TrueFrame** to the app target. A version rule resolving to the existing `0.1.0`
+   tag has only the older **AppShots** product/import. A checkout can also be added as a local package; the example does this.
+2. Import and call it inside `#if DEBUG`. Create your store first, start the SDK, then call the fixture hook
+   **before presenting views or starting normal loads**:
 
    ```swift
+   import SwiftUI
    #if DEBUG
    import TrueFrame
    #endif
 
    @main
    struct MyApp: App {
+       private let store: AppStore // your app's own store
+
        init() {
+           let store = AppStore()
            #if DEBUG
            TrueFrame.start()
+           TrueFrame.fixtures { name in
+               store.loadFixture(named: name) // implement an explicit allowlist in your app
+           }
            #endif
+           self.store = store
        }
-       // …
+
+       var body: some Scene {
+           WindowGroup { RootView(store: store) }
+       }
    }
    ```
 
-   In a UIKit app, call it at the top of `application(_:didFinishLaunchingWithOptions:)`.
-3. Run your app once from TrueFrame. Its project window shows the package as detected.
+   This sketch uses app-owned types. [Trail Journal](Examples/TrailJournal/README.md) is the complete buildable version.
+   For UIKit, use the same order in `application(_:didFinishLaunchingWithOptions:)`, before constructing the UI.
+3. In the Mac capture set, request `"package": { "captureMode": true, "fixtures": "weekend-hikes" }`.
+   The name must match app code. Rebuild the Debug simulator app after integration and use that build in TrueFrame.
 
-## Use it
+`fixtures(_:)` invokes its closure immediately and synchronously if a nonempty name was requested.
+It does not retain a registration, await a `Task`, or know whether the name exists. Calling it before `start()` misses
+that launch's request. Fixture selection is independent of `isCapturing`; a project can request either feature alone.
+For asynchronous app loading, [gate readiness explicitly](docs/capture-recipes.md#fixture-readiness).
 
-Skip interruptions while capturing:
-
-```swift
-#if DEBUG
-if TrueFrame.isCapturing { return }   // e.g. before asking for notification permission
-#endif
-```
-
-Load demo data when TrueFrame asks for it:
+## Choose capture behavior in app code
 
 ```swift
-#if DEBUG
-TrueFrame.fixtures { set in
-    store.load(fixtures: set)        // your own demo data, by name
+func offerOptionalTip() {
+    #if DEBUG
+    if TrueFrame.isCapturing { return }
+    #endif
+    // Present your ordinary local tip here.
 }
-#endif
 ```
+
+Keep overrides and demo data inside `#if DEBUG` in your app too. The SDK's Release state is always inactive,
+`fixtures` never invokes its closure, and `start()` writes nothing. Linking the package does not by itself remove
+all library code from a Release binary. Do not define `DEBUG` in your shipping configuration.
+In Debug, activation requires `APPSHOTS_CAPTURE=1`; anyone launching the app can supply that flag manually.
+**Capture mode is not authorization.** Keep real account access, biometrics protecting real data, token validation,
+and server permissions intact. Use isolated synthetic local data for demo screens.
 
 ## If your app guards its clock
 
-TrueFrame can set your app's clock to a fixed time of day (9:41, like the status bar), so "Good morning" and "Starts in 3 hours" read the same every run. It does this from outside, so it works without this package.
+The status bar's `9:41` changes only the status bar. App text based on `Date()` keeps following real time.
+TrueFrame's Mac profile can separately opt into `appClock` injection, without this SDK; it is off by default.
+`TrueFrame.isClockSet` only reports the Debug launch's `APPSHOTS_CLOCK_START` marker, not a clock set by this package.
+It does not validate injection or guarantee that every time source is intercepted.
 
-Some apps end the session when the clock moves, to stop people changing the time to get around a session limit or a token check. If yours does, TrueFrame notices on the first capture (the app signs out), stops the run and turns its clock off for your project. To have both, skip your guard while TrueFrame has set the clock:
+Clock shifts can expire tokens or trigger clock-change protections and sign users out. Leave `appClock` unset for
+real sessions; do not copy a general clock/auth guard bypass. Prefer app-owned fixed display values in an isolated
+Debug fixture when possible. Injection does not freeze server time or renew credentials.
+Container snapshots omit Keychain and cannot freeze server state; [details and recovery](docs/capture-recipes.md#clock-authentication-and-snapshots).
 
-```swift
-func clockWasSetBack(since stored: Date, now: Date) -> Bool {
-    #if DEBUG
-    if TrueFrame.isClockSet { return false }   // TrueFrame moved it on purpose, for screenshots
-    #endif
-    return stored.timeIntervalSince(now) > 5 * 60
-}
+## Launch protocol
+
+| Debug environment | Meaning |
+| --- | --- |
+| `APPSHOTS_CAPTURE=1` | Enables reading capture settings and writing the detection file |
+| `APPSHOTS_CAPTURE_MODE=1` | Sets `isCapturing` when the launch marker is present |
+| `APPSHOTS_FIXTURES=<name>` | Sets `fixtureSet`; an empty string means no fixture |
+| `APPSHOTS_CLOCK_START=<value>` | Presence sets `isClockSet` when the launch marker is present |
+
+Call `start()` once per process launch. The detection file is
+`Library/Application Support/AppShots/package.json` in the app's data container, **not** a `TrueFrame` directory.
+It contains `version`, `features` (`captureMode`, `fixtures`, `clock`), `captureMode`, optional `fixtureSet`,
+`clockSet`, and ISO-8601 `startedAt`. These are supported capabilities and requested settings, not proof that
+app-owned fixture loading or optional clock injection succeeded. The Mac tool clears/reads this file for detection.
+The SDK itself makes no network requests.
+
+## Example and checks
+
+[Trail Journal](Examples/TrailJournal/README.md) includes a normal Xcode project, local package dependency,
+named synthetic fixtures, validated debug launch links and content accessibility identifiers. No service or account is needed.
+
+From this repository root, with Xcode's command-line tools selected:
+
+```sh
+swift test --scratch-path .build/host -j 4
+swift build --scratch-path .build/host -c release -j 4
+swift test --scratch-path .build/host -c release -j 4
 ```
 
-`isClockSet` is only ever true in a debug build that TrueFrame launched with its clock on.
-
-## How TrueFrame talks to it
-
-TrueFrame passes launch settings as environment variables (`APPSHOTS_CAPTURE`, `APPSHOTS_CAPTURE_MODE`, `APPSHOTS_FIXTURES`, and `APPSHOTS_CLOCK_START` when it sets the clock). On start, the package writes `Library/Application Support/TrueFrame/package.json` in your app's data folder with its version and what it was asked to do; that is how TrueFrame detects it. Nothing leaves the simulator.
+These run on the host and do not launch a simulator. See the example README for Debug/Release simulator build commands
+and [validation evidence](docs/validation.md) for what was checked and what remains unproved.
 
 ## Licence
 

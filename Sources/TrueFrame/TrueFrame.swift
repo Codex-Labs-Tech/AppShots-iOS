@@ -8,31 +8,30 @@ import Foundation
 ///     TrueFrame.start()
 ///     #endif
 ///
-/// Nothing happens unless TrueFrame launches the app, and then only what the TrueFrame project turns on. In a
-/// release build the package compiles to empty stubs: `isCapturing` is always false.
+/// In Debug, activation requires `APPSHOTS_CAPTURE=1`; callers can also supply that environment manually for testing.
+/// In Release, capture state is inactive and `start()` does nothing. The app owns its fixture data and UI decisions.
 public enum TrueFrame {
     /// This package's version, reported to TrueFrame.
     public static let version = "0.1.0"
 
-    /// True while TrueFrame is capturing with capture mode on. Use it to skip anything that would get in the way of
-    /// a screenshot: permission and biometric prompts, onboarding, review requests, tips, debug banners.
+    /// True during a Debug launch with capture mode requested. App code may suppress optional tips or review prompts.
+    /// This is not an authorization signal: do not use it to grant access to real accounts or protected data.
     public static var isCapturing: Bool { state.isCapturing }
 
     /// The fixture set TrueFrame asked for, if any: load that demo data instead of the usual source.
     public static var fixtureSet: String? { state.fixtureSet }
 
-    /// True when TrueFrame has set this app's clock to a fixed time of day (its `appClock` setting), so dates read the
-    /// same every run. If your app ends sessions when the clock moves (a guard against people changing the time),
-    /// skip that guard while this is true: TrueFrame moved it on purpose. See the README.
+    /// True in Debug when a capture launch includes the clock-injection marker. This package does not set time.
+    /// An injected app clock can invalidate authentication; leave it off for real sessions. See the README.
     public static var isClockSet: Bool { state.isClockSet }
 
-    /// Reads TrueFrame' launch settings and tells TrueFrame the package is here. Call it once, early, in debug builds.
+    /// Reads TrueFrame's launch settings and writes its detection file. Call once, early, in debug builds.
     public static func start() {
         start(environment: ProcessInfo.processInfo.environment)
     }
 
-    /// Calls `load` with the requested fixture set, if TrueFrame asked for one. Call it where your app sets up its
-    /// data, after `start()`.
+    /// Calls `load` immediately and synchronously with the requested fixture name, if any, after `start()`.
+    /// This does not retain a callback, generate data, await work, or check whether the app recognizes the name.
     public static func fixtures(_ load: (String) -> Void) {
         if let set = fixtureSet { load(set) }
     }
